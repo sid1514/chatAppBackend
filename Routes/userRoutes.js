@@ -10,6 +10,6 @@ router.route("/").get(protect, allUsers);
 //router.route("/").post(registerUser);
 router.route("/").post(upload.single("userPic"), registerUser);
 router.post("/login", authUser);
-router.post("/login",googleAuth)
+router.post("/login/googleauth",googleAuth)
 router.get("/:id/pic", getUserPic);
 module.exports = router;
