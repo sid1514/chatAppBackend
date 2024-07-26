@@ -8,7 +8,7 @@ const userRoutes = require("./Routes/userRoutes");
 const chatRoutes = require("./Routes/chatRoutes");
 const messageRoutes = require("./Routes/messageRoutes");
 const { notFound } = require("./config/errorHanding");
-
+const bodyParser = require("body-parser");
 //const fs = require("fs");
 //const upload = multer({ dest: "uploads/" });
 app.use(cors());
@@ -24,7 +24,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/message", messageRoutes);
 app.use(notFound);
-
+app.use(bodyParser.json());
 const PORT = process.env.PORT;
 const server = app.listen(PORT, console.log("server started on port 5000"));
 

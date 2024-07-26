@@ -1,8 +1,15 @@
 const asyncHandler = require("express-async-handler");
 const User = require("../schema/userModel");
 const generateToken = require("../config/generateToken");
+const jwt = require("jsonwebtoken");
+const { OAuth2Client } = require("google-auth-library");
+const CLIENT_ID = process.env.CLIENT_ID;
+const SECRET_KEY = process.env.CLIENT_KEY; // Use a strong secret key
 
 const fs = require("fs");
+;
+
+const client = new OAuth2Client(CLIENT_ID);
 const allUsers = asyncHandler(async (req, res) => {
   const keyboard = req.query.search
     ? {
@@ -78,6 +85,40 @@ const authUser = asyncHandler(async (req, res) => {
   }
 });
 
+const googleAuth = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: CLIENT_ID,
+    });
+
+    const { name, email, picture } = ticket.getPayload();
+
+    // Check if user exists in your database, if not create a new user
+    let user = await User.findOne({ email });
+    if (!user) {
+      const randomPassword = Math.random().toString(36).slice(-8); // Generate a random password
+      user = new User({ name, email, password: randomPassword, pic: picture });
+      await user.save();
+    }
+
+    // Generate a token for the user
+    const jwtToken = jwt.sign({ userId: user._id }, SECRET_KEY, {
+      expiresIn: "1h",
+    });
+
+    res.json({
+      token: jwtToken,
+      user: { name: user.name, email: user.email, pic: user.pic },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(401).json({ message: "Invalid token" });
+  }
+});
+
 const getUserPic = asyncHandler(async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -97,4 +138,5 @@ module.exports = {
   authUser,
   allUsers,
   getUserPic,
+  googleAuth,
 };
