@@ -9,8 +9,7 @@ const chatRoutes = require("./Routes/chatRoutes");
 const messageRoutes = require("./Routes/messageRoutes");
 const { notFound } = require("./config/errorHanding");
 const bodyParser = require("body-parser");
-//const fs = require("fs");
-//const upload = multer({ dest: "uploads/" });
+
 app.use(cors());
 env.config();
 app.get("/", (req, res) => {
