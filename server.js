@@ -10,12 +10,7 @@ const messageRoutes = require("./Routes/messageRoutes");
 const { notFound } = require("./config/errorHanding");
 const bodyParser = require("body-parser");
 
-app.use(
-  cors({
-    origin: "http://localhost:3000" || "https://chitchatappsid.onrender.com/", // Replace with your frontend URL
-    credentials: true,
-  })
-);
+app.use(cors());
 env.config();
 app.get("/", (req, res) => {
   res.send("home page");
@@ -31,11 +26,7 @@ app.use(notFound);
 app.use(bodyParser.json());
 const PORT = process.env.PORT;
 const server = app.listen(PORT, console.log("server started on port 5000"));
-app.use((req, res, next) => {
-  res.removeHeader("Cross-Origin-Opener-Policy");
-  res.removeHeader("Cross-Origin-Embedder-Policy");
-  next();
-});
+
 const io = require("socket.io")(server, {
   pingTimeout: 60000,
   cors: {
