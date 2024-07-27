@@ -1,14 +1,13 @@
+const { OAuth2Client } = require("google-auth-library");
 const asyncHandler = require("express-async-handler");
 const User = require("../schema/userModel");
 const generateToken = require("../config/generateToken");
 const jwt = require("jsonwebtoken");
-const { OAuth2Client } = require("google-auth-library");
+
 const CLIENT_ID = process.env.CLIENT_ID;
 const SECRET_KEY = process.env.CLIENT_KEY; // Use a strong secret key
 
 const fs = require("fs");
-;
-
 const client = new OAuth2Client(CLIENT_ID);
 const allUsers = asyncHandler(async (req, res) => {
   const keyboard = req.query.search
@@ -85,37 +84,71 @@ const authUser = asyncHandler(async (req, res) => {
   }
 });
 
-const googleAuth = asyncHandler(async (req, res) => {
-  const { token } = req.body;
-
+const registerGoogleAuth = asyncHandler(async (req, res) => {
+  const token = req.body.token;
   try {
     const ticket = await client.verifyIdToken({
       idToken: token,
       audience: CLIENT_ID,
     });
+    const payload = ticket.getPayload();
 
-    const { name, email, picture } = ticket.getPayload();
-
-    // Check if user exists in your database, if not create a new user
-    let user = await User.findOne({ email });
-    if (!user) {
-      const randomPassword = Math.random().toString(36).slice(-8); // Generate a random password
-      user = new User({ name, email, password: randomPassword, pic: picture });
-      await user.save();
+    const name = payload.name;
+    const email = payload.email;
+    const pic = payload.picture;
+    const password = payload.email;
+    if (!name || !email) {
+      res.status(400);
+      throw new Error("Name and email are required fields");
     }
 
-    // Generate a token for the user
-    const jwtToken = jwt.sign({ userId: user._id }, SECRET_KEY, {
-      expiresIn: "1h",
+    const userExists = await User.findOne({ email });
+
+    if (userExists) {
+      res.status(400);
+
+      return;
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      password: password, // You can choose to generate a random password or leave it null
+      //userPic: pic, // Uncomment if you handle profile image
     });
 
-    res.json({
-      token: jwtToken,
-      user: { name: user.name, email: user.email, pic: user.pic },
-    });
+    if (user) {
+      res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        // pic: user.userPic, // Uncomment if you handle profile image
+        token: generateToken(user._id),
+      });
+    } else {
+      res.status(400);
+      throw new Error("User not created");
+    }
   } catch (error) {
-    console.error(error);
-    res.status(401).json({ message: "Invalid token" });
+    console.error("Error verifying token:", error);
+    res.status(400).json({ message: "Error verifying token", error });
+  }
+});
+
+const googleAuth = asyncHandler(async (req, res) => {
+  const email = req.body.email;
+  const user = await User.findOne({ email });
+  if (user) {
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      pic: user.pic,
+      token: generateToken(user._id),
+    });
+  } else {
+    res.status(401);
+    throw new Error("Invalid Email or password");
   }
 });
 
@@ -139,4 +172,5 @@ module.exports = {
   allUsers,
   getUserPic,
   googleAuth,
+  registerGoogleAuth,
 };
